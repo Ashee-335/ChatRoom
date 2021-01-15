@@ -8,7 +8,9 @@ import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.*;
+import java.net.InetAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.security.NoSuchAlgorithmException;
 import java.sql.*;
 import javax.swing.JButton;
@@ -86,6 +88,8 @@ public class LoginThread extends Thread {
             public void actionPerformed(ActionEvent e) {
                 String username = loginname.getText();//我们自己输入的
                 String password = loginPassword.getText();//我们自己输入的
+                PreparedStatement pstmt=null;
+                String sql="";
                 try {
                     /**
                  * 实现登录
@@ -98,8 +102,8 @@ public class LoginThread extends Thread {
                     String username_db = "opts";//username_dbs是数据库用户名
                     String password_db = "opts1234";//password_db是数据库的登录密码
                     Connection conn = DriverManager.getConnection(url, username_db, password_db);
-                    String sql = "SELECT password FROM users WHERE username=?";//条件查询
-                    PreparedStatement pstmt = conn.prepareStatement(sql);
+                    sql = "SELECT password FROM users WHERE username=?";//条件查询
+                    pstmt = conn.prepareStatement(sql);
                     pstmt.setString(1,username);
                     ResultSet rs = pstmt.executeQuery();//结果集
                     //如果这个结果集能够往下走，就证明根据用户名找到对应的密码
@@ -107,6 +111,20 @@ public class LoginThread extends Thread {
                         String encodePassword = rs.getString("PASSWORD");
                         //把登录界面输入的密码（password）和数据库里加密后的密码（encodePassword）进行比对（调用MD5类的checkpassword方法）
                         if (MD5.checkpassword(password, encodePassword)) {
+                            /*获取本机IP
+                                    开启一个端口8888
+                            隐藏登录界面
+                                    显示聊天窗口
+                             */
+                            InetAddress addr = InetAddress.getLocalHost();
+                            System.out.println("本机IP地址: "+addr.getHostAddress());
+                            sql="UPDATE users SET ip=?,port=8888 WHERE username=?";
+                            pstmt=conn.prepareStatement(sql);
+                            pstmt.setString(1,addr.getHostAddress());
+                            pstmt.setString(2,username);
+                            pstmt.executeUpdate();
+                            loginf.setVisible(false);
+                            ChatThreadWindow chatThreadWindow=new ChatThreadWindow();
                             System.out.println("登录成功");
                         } else {
                             System.out.println("登录失败");
@@ -117,6 +135,8 @@ public class LoginThread extends Thread {
                 } catch (NoSuchAlgorithmException ex) {
                     ex.printStackTrace();
                 } catch (UnsupportedEncodingException ex) {
+                    ex.printStackTrace();
+                } catch (UnknownHostException ex) {
                     ex.printStackTrace();
                 }
             }
